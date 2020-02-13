@@ -11,3 +11,6 @@ Generation Command: MakeDriverCmd.py --nthreads=1
         --conditions=106X_mc2017_realistic_v6
         --beamspot=Realistic25ns13TeVEarly2017Collision
 
+Pileup file list is generated using command:
+
+dasgoclient --query="file dataset=/Neutrino_E-10_gun/RunIISummer19ULPrePremix-UL17_106X_mc2017_realistic_v6-v1/PREMIX" --limit=1000000

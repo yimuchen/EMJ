@@ -138,7 +138,8 @@ def makeHLT(args):
                       hltversion=args.hltversion,
                       threads=args.nthreads,
                       geometry=args.geometry,
-                      era=args.era)
+                      era=args.era).split()
+  print_and_run( 'HLT', cmd )
 
 
 def makeAOD(args):

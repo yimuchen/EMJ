@@ -10,7 +10,7 @@ class emjHelper(object):
           int(xline.split()[0]): float(xline.split()[1])
           for xline in xfile
       }
-    self.alphaName = ""
+    self.alphaName = ''
     # parameters for lambda/alpha calculations
     self.n_c = 2
     self.n_f = 2
@@ -18,16 +18,16 @@ class emjHelper(object):
 
   def setAlpha(self, alpha):
     self.alphaName = alpha
-    # "empirical" formula
+    # 'empirical' formula
     lambda_peak = 3.2 * math.pow(self.mDark, 0.8)
-    if self.alphaName == "peak":
+    if self.alphaName == 'peak':
       self.alpha = self.calcAlpha(lambda_peak)
-    elif self.alphaName == "high":
+    elif self.alphaName == 'high':
       self.alpha = 1.5 * self.calcAlpha(lambda_peak)
-    elif self.alphaName == "low":
+    elif self.alphaName == 'low':
       self.alpha = 0.5 * self.calcAlpha(lambda_peak)
     else:
-      raise ValueError("unknown alpha request: " + alpha)
+      raise ValueError('unknown alpha request: ' + alpha)
 
   # calculation of lambda to give desired alpha
   # see 1707.05326 fig2 for the equation: alpha = pi/(b * log(1 TeV / lambda)), b = 11/6*n_c - 2/6*n_f
@@ -40,7 +40,7 @@ class emjHelper(object):
   def calcLambda(self, alpha):
     return 1000 * math.exp(-math.pi / (self.b0 * alpha))
 
-  # has to be "lambdaHV" because "lambda" is a keyword
+  # has to be 'lambdaHV' because 'lambda' is a keyword
   def setModel(self, mX, mDPi, tauDPi):
     self.mX = mX
     self.mDPi = mDPi
@@ -49,15 +49,15 @@ class emjHelper(object):
     self.xsec = self.getPythiaXsec(mX)
     return
 
-  def getOutName(self, signal=True,events=0, outpre="outpre", part=None):
+  def getOutName(self, signal=True,events=0, outpre='outpre', part=None):
     _outname = outpre
     if signal:
-      _outname += "_mX-{:g}".format(self.mX)
-      _outname += "_mDPi-{:g}".format(self.mDPi)
-      _outname += "_tauDPi-{:g}".format(self.tauDPi)
-    if events > 0: _outname += "_n-{:g}".format(events)
+      _outname += '_mX-{:g}'.format(self.mX)
+      _outname += '_mDPi-{:g}'.format(self.mDPi)
+      _outname += '_tauDPi-{:g}'.format(self.tauDPi)
+    if events > 0: _outname += '_n-{:g}'.format(events)
     if part is not None:
-      _outname += "_part-{:g}".format(part)
+      _outname += '_part-{:g}'.format(part)
     return _outname
 
   # allow access to all xsecs
