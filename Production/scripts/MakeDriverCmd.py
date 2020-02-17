@@ -35,7 +35,7 @@ parser.add_argument('--era',
                     help='Run Era setting')
 parser.add_argument('--hltversion',
                     type=str,
-                    default='2e34v40',
+                    default='@relval2017',
                     help='HLT version string')
 parser.add_argument(
     '--pileup',
@@ -119,13 +119,12 @@ def makeDIGI(args):
                       era=args.era,
                       pileup=args.pileup,
                       geometry=args.geometry).split()
-  print_and_run("DIGI", cmd)
+  print_and_run('DIGI', cmd)
 
 
 def makeHLT(args):
-  cmd = """ cmsDriver step3
+  cmd = """ cmsDriver.py step3
   --python_filename={python_prefix}_step3_HLT.py
-  --fileout=file:step1_HLT.root
   --mc --eventcontent RAWSIM --datatier GEN-SIM-RAW
   --conditions={conditions}
   --customise_commands='process.source.bypassVersionCheck=cms.untracked.bool(True)'
@@ -133,6 +132,7 @@ def makeHLT(args):
   --nThreads={threads}
   --geometry={geometry}
   --era={era}
+  --fileout=step3.root
   --no_exec""".format(conditions=args.hlt_condition,
                       python_prefix=args.python_prefix,
                       hltversion=args.hltversion,
@@ -151,7 +151,7 @@ def makeAOD(args):
     --nThreads={threads}
     --geometry={geometry}
     --era={era}
-    --fileout=file:step3.root
+    --fileout=step4.root
     --no_exec""".format(python_prefix=args.python_prefix,
                         conditions=args.conditions,
                         threads=args.nthreads,
@@ -169,8 +169,8 @@ def makeMINIAOD(args):
    --geometry={geometry}
   --era={era}
   --nThreads={threads}
-  --filein=file:step3.root
-  --fileout=file:step4.root
+  --filein=step4.root
+  --fileout=step5.root
   --no_exec""".format(python_prefix=args.python_prefix,
                       conditions=args.conditions,
                       geometry=args.geometry,
