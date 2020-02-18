@@ -18,14 +18,15 @@ options.register('part', 1, VarParsing.multiplicity.singleton,
                  VarParsing.varType.int)
 options.register('inputfile', '', VarParsing.multiplicity.list,
                  VarParsing.varType.string)
-options.register('outputprefix', 'step0', VarParsing.multiplicity.singleton,
+options.register('outpre', 'step0', VarParsing.multiplicity.singleton,
                  VarParsing.varType.string)
 options.register('config', 'EMJ.Production.2017UL.emj_step0_GEN',
                  VarParsing.multiplicity.singleton, VarParsing.varType.string)
 options.register('dump', False, VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool)
+options.register("redir", "", VarParsing.multiplicity.singleton,
+                 VarParsing.varType.string)
 options.parseArguments()
-
 
 # this is needed because options.outpre is not really a list
 _helper = emjHelper()
@@ -35,7 +36,7 @@ _helper.setModel(mX=options.mX, mDPi=options.mDPi, tauDPi=options.tauDPi)
 _outname = _helper.getOutName(events=options.maxEvents,
                               part=options.part,
                               signal=options.signal,
-                              outpre=options.outputprefix) + '.root'
+                              outpre=options.outpre) + '.root'
 _inname = options.inputfile
 
 # import process
@@ -56,13 +57,13 @@ for iout, output in enumerate(output_modules):
   if len(output) == 0: continue
   if not hasattr(oprocess, output):
     raise ValueError('Unavailable output module: ' + output)
-  getattr(oprocess, output).fileName = 'file:' + _outname.replace(
-      'outpre', options.outputprefix)
+  getattr(oprocess,
+          output).fileName = 'file:' + _outname.replace('outpre', options.outpre)
 
 # reset all random numbers to ensure statistically distinct but reproducible jobs
 from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
 randHelper = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
-randHelper.resetSeeds(123)
+randHelper.resetSeeds(options.maxEvents + options.part)
 
 if options.signal:
   if hasattr(process, 'generator'):
@@ -134,7 +135,7 @@ if hasattr(process, 'mixData'):
   pileup_list = []
   fullpath = glob.glob(fullpath)[0]
   with open(fullpath) as file:
-    pileup_list = [x.strip() for x in file ]
+    pileup_list = [x.strip() for x in file]
   process.mixData.input.fileNames = cms.untracked.vstring(*pileup_list)
 
 # miniAOD settings

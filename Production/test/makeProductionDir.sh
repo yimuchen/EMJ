@@ -17,9 +17,9 @@ fi
 
 mkdir -p $TODIR
 mkdir -p $TODIR/input
-$LINK ${CMSSW_BASE}/src/Condor/Production/scripts/jobExecCondor.jdl $TODIR
 $LINK ${CMSSW_BASE}/src/Condor/Production/scripts/jobExecCondor.sh  $TODIR
 $LINK ${CMSSW_BASE}/src/Condor/Production/scripts/checkVomsTar.sh   $TODIR
 $LINK ${CMSSW_BASE}/src/Condor/Production/scripts/step1.sh          $TODIR
+$LINK ${CMSSW_BASE}/src/EMJ/Production/scripts/jobExecCondor.jdl    $TODIR
 $LINK ${CMSSW_BASE}/src/EMJ/Production/scripts/step2.sh             $TODIR
 $LINK ${CMSSW_BASE}/src/EMJ/Production/scripts/submitJobs.py        $TODIR
