@@ -17,7 +17,7 @@ process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
-process.load('HLTrigger.Configuration.HLT_Fake_cff')
+process.load('HLTrigger.Configuration.HLT_Fake2_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
@@ -61,7 +61,7 @@ process.RAWSIMoutput = cms.OutputModule("PoolOutputModule",
 
 # Other statements
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '94X_mc2017_realistic_v15', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '106X_mc2017_realistic_v6', '')
 
 # Path and EndPath definitions
 process.endjob_step = cms.EndPath(process.endOfProcess)
