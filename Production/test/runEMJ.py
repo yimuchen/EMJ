@@ -4,28 +4,65 @@ import sys, os, re, glob
 from EMJ.Production.emjHelper import emjHelper
 
 options = VarParsing('analysis')
-options.register('signal', True, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.bool)
-options.register('scan', '', VarParsing.multiplicity.singleton,
-                 VarParsing.varType.string)
-options.register('mX', 1000.0, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.float)
-options.register('mDPi', 10.0, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.float)
-options.register('tauDPi', 15, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.float)
-options.register('part', 1, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.int)
-options.register('inputfile', '', VarParsing.multiplicity.list,
-                 VarParsing.varType.string)
-options.register('outpre', 'step0', VarParsing.multiplicity.singleton,
-                 VarParsing.varType.string)
-options.register('config', 'EMJ.Production.2017UL.emj_step0_GEN',
-                 VarParsing.multiplicity.singleton, VarParsing.varType.string)
-options.register('dump', False, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.bool)
-options.register("redir", "", VarParsing.multiplicity.singleton,
-                 VarParsing.varType.string)
+options.register('signal',
+                 default=True,
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.bool,
+                 info=('Whether the process is a signal process'
+                       ', adds additional MC filtering to ensure topology, and'
+                       ', also adjusts the naming scheme accordingly'))
+options.register('mX',
+                 default=1000.0,
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.float,
+                 info=('Mass of the dark mediator [GeV] (default=%default)'))
+options.register('mDPi',
+                 default=10.0,
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.float,
+                 info='Mass of dark pion [GeV] (default=%default)')
+options.register('tauDPi',
+                 default=15,
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.float,
+                 info='Decay length of dark pion [mm]')
+options.register('inpre',
+                 default="",
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.string,
+                 info='Prefix of input file')
+options.register('indir',
+                 default="",
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.string,
+                 info='Directory to input file')
+options.register('redir',
+                 default="file:",
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.string,
+                 info=('Remote local for input file ("file:" for local files, '
+                       '"" for automatic remote locations, '
+                       '"root://eoscms.XXX.XX/" for specific site.. etc)'))
+options.register('part',
+                 default=1,
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.int,
+                 info='Label for individual jobs (for different RNG seed)')
+options.register('outpre',
+                 default='step0',
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.string,
+                 info='Output prefix')
+options.register('config',
+                 default='EMJ.Production.2017UL.emj_step0_GEN',
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.string,
+                 info='cmsRun config file to use')
+options.register('dump',
+                 default=False,
+                 mult=VarParsing.multiplicity.singleton,
+                 mytype=VarParsing.varType.bool,
+                 info='Dump contents of a augmented process config and exit')
 options.parseArguments()
 
 # this is needed because options.outpre is not really a list
@@ -37,14 +74,23 @@ _outname = _helper.getOutName(events=options.maxEvents,
                               part=options.part,
                               signal=options.signal,
                               outpre=options.outpre) + '.root'
-_inname = options.inputfile
+# Input file renaming
+_inname = _helper.getOutName(events=options.maxEvents,
+                             part=options.part,
+                             signal=options.signal,
+                             outpre=options.inpre) + '.root'
+_inname = options.redir + os.path.join(options.indir, _inname)
 
 # import process
 process = getattr(__import__(options.config, fromlist=['process']), 'process')
 
 # input settings
 process.maxEvents.input = cms.untracked.int32(options.maxEvents)
-if len(_inname) > 0: process.source.fileNames = cms.untracked.vstring(_inname)
+if not hasattr(process, 'generator'):
+  if len(options.inputFiles) > 0 :
+    process.source.fileNames = cms.untracked.vstring(options.inputFiles)
+  else:
+    process.source.fileNames = cms.untracked.vstring(_inname)
 else:
   process.source.firstEvent = cms.untracked.uint32((options.part - 1) *
                                                    options.maxEvents + 1)
@@ -63,7 +109,8 @@ for iout, output in enumerate(output_modules):
 # reset all random numbers to ensure statistically distinct but reproducible jobs
 from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
 randHelper = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
-randHelper.resetSeeds(options.maxEvents + options.part)
+print ((options.maxEvents << 16 ) | options.part)
+randHelper.resetSeeds((options.maxEvents << 16 ) | options.part)
 
 if options.signal:
   if hasattr(process, 'generator'):
