@@ -82,9 +82,94 @@ python submitJobs.py -p                                           \
        -o [YOUR_OUTPUT_DIRECTORY]                                 \
        -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py  \
        -E 500 -N 20                                               \
-       --outpre step1_GEN                                         \
+       --outpre step1_SIM                                         \
        --config EMJ.Production.2017UL.emj_step1_GEN -s            \
       --indir=[PREVIOUS_OUTPUT_DIR]                               \
       --redir=[REMOTE_SITE_URL]
       --inpre=step0_GEN
+```
+
+Notice that in the case the you are moving the output files to some remote
+server, (ex, to `root://cmseos.fnal.gov/`) you only need to specify this once in
+the output stage via the `-o` option, like:
+
+```bash
+-o root://cmseos.fnal.gov//store/user/myusername/EMJProduction/
+```
+
+To use the output from the production command, the input would need to be
+specified via the `--indir` and `--redir` options separately, so the
+corresponding for the next step with the output above would be something like:
+
+```bash
+--redir=root://cmseos.fnal.gov/
+--indir=/store/user/myusername/EMJProduction/
+```
+
+By default, `--redir` would look for files on the directly accessible via the
+local machines (effectively `--redir=file:`).
+
+## Specific Production Run Commands
+
+### UMD 2017UL
+
+```bash
+# GEN ONLY
+python submitJobs.py -p                                           \
+       -o /data/users/yichen/EmergingJets/LocalProduction/output  \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py  \
+       -E 500 -N 20                                               \
+       --outpre step0_GEN                                         \
+       --config EMJ.Production.2017UL.emj_step0_GEN -s
+
+# SIM ONLY
+python submitJobs.py -p                                              \
+       -o /data/users/yichen/EmergingJets/LocalProduction/output     \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py     \
+       -E 500 -N 20                                                  \
+       --outpre step1_SIM                                            \
+       --config EMJ.Production.2017UL.emj_step1_SIM -s               \
+      --indir=/data/users/yichen/EmergingJets/LocalProduction/output \
+      --redir=""   --inpre=step0_GEN
+
+# DIGI ONLY
+python submitJobs.py -p                                              \
+       -o /data/users/yichen/EmergingJets/LocalProduction/output     \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py     \
+       -E 500 -N 20                                                  \
+       --outpre step2_DIGI                                           \
+       --config EMJ.Production.2017UL.emj_step2_DIGI -s              \
+      --indir=/data/users/yichen/EmergingJets/LocalProduction/output \
+      --redir=""   --inpre=step1_SIM
+
+# HLT
+python submitJobs.py -p                                              \
+       -o /data/users/yichen/EmergingJets/LocalProduction/output     \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py     \
+       -E 500 -N 20                                                  \
+       --outpre step3_HLT                                            \
+       --config EMJ.Production.2017UL.emj_step3_HLT -s               \
+      --indir=/data/users/yichen/EmergingJets/LocalProduction/output \
+      --redir=""   --inpre=step2_DIGI
+
+# Reco
+python submitJobs.py -p                                              \
+       -o /data/users/yichen/EmergingJets/LocalProduction/output     \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py     \
+       -E 500 -N 20                                                  \
+       --outpre step4_AOD                                            \
+       --config EMJ.Production.2017UL.emj_step4_AOD -s               \
+      --indir=/data/users/yichen/EmergingJets/LocalProduction/output \
+      --redir=""   --inpre=step3_HLT
+
+# MINIAOD
+python submitJobs.py -p                                              \
+       -o /data/users/yichen/EmergingJets/LocalProduction/output     \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py     \
+       -E 500 -N 20                                                  \
+       --outpre step5_MINIAOD                                        \
+       --config EMJ.Production.2017UL.emj_step5_MINIAOD -s           \
+      --indir=/data/users/yichen/EmergingJets/LocalProduction/output \
+      --redir=""   --inpre=step4_AOD
+
 ```

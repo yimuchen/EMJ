@@ -96,10 +96,10 @@ class emjHelper(object):
         '4900004:m0 = 50000',
         '4900005:m0 = 50000',
         '4900006:m0 = 50000',
-        'HiddenValley:Lambda=10.',
+        'HiddenValley:Lambda={0}'.format(self.mDPi * 2 ),
         'HiddenValley:pTminFSR = 11.0',
         # dark quark mass = LambdaHV
-        '4900101:m0 = 10',
+        '4900101:m0 = {0}'.format(self.mDPi * 2 ),
         # dark scalar (pion) mass
         '4900111:m0 = {0}'.format(self.mDPi),
         '4900211:m0 = {0}'.format(self.mDPi),
@@ -107,8 +107,9 @@ class emjHelper(object):
         '4900111:tau0 = {0}'.format(self.tauDPi),
         '4900211:tau0 = {0}'.format(self.tauDPi),
         # dark vector (rho) mass
-        '4900113:m0 = 20',
-        '4900213:m0 = 20',
+        '4900113:m0 = {0}'.format(self.mDPi * 4 ) ,
+        '4900213:m0 = {0}'.format(self.mDPi * 4 ) ,
+        # Resonance decays to dark quark + flavoured SM
         # dark pion decay to down quarks
         '4900111:0:all      =  1 1.000  91        1       -1',
         # dark vector to dark pions 99.9%

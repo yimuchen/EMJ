@@ -181,8 +181,10 @@ if hasattr(process, 'mixData'):
         'Could not retrieve pileup input list in {0}'.format(fullpath))
   pileup_list = []
   fullpath = glob.glob(fullpath)[0]
+  print fullpath
   with open(fullpath) as file:
     pileup_list = [x.strip() for x in file]
+  print pileup_list
   process.mixData.input.fileNames = cms.untracked.vstring(*pileup_list)
 
 # miniAOD settings
