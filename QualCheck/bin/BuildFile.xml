@@ -7,3 +7,4 @@
 <flags CXXFLAGS="-g -O3"/>
 
 <bin name="EMJ_GenParticleDump"  file="GenParticleDump.cc" />
+<bin name="EMJ_Test"             file="Test.cc"            />

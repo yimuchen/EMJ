@@ -3,3 +3,10 @@
 <use name="DataFormats/FWLite"/>
 <use name="DataFormats/PatCandidates"/>
 <use name="CommonTools/UtilAlgos"/>
+
+<use name="TrackingTools/IPTools"/>
+<use name="TrackingTools/Records"/>
+<use name="TrackingTools/TransientTrack"/>
+
+<use name="UserUtils/EDMUtils"/>
+<use name="EMJ/QualCheck"/>

@@ -4,6 +4,9 @@
 #include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 
+#include "EMJ/QualCheck/interface/EMJGenFinder.hpp"
+
+
 class TrackQualityHist : public usr::EDHistogramAnalyzer
 {
 public:
@@ -37,20 +40,22 @@ TrackQualityHist::TrackQualityHist( const edm::ParameterSet& iConfig ) :
 
 void TrackQualityHist::beginJob()
 {
-  BookHist1D( "TkNum",  60, 0,   60    );
-  BookHist1D( "PT",    400, 0,   10    );
-  BookHist1D( "Eta",   500, -2.5, +2.5 );
-  BookHist1D( "Phi",   640, -3.2, +3.2 );
-  BookHist1D( "Chi2",   20, 0,   20    );
-  BookHist1D( "D0",    400, 0,    3    );
-  BookHist1D( "DZ",    400, 0,   10    );
-  BookHist1D( "NHits",  40, 0,   40    );
-  BookHist1D( "NMHits", 20, 0,   20    );
+  BookHist1D( "TkNum",    60,   0,     60 );
+  BookHist1D( "PT",      400,   0,     10 );
+  BookHist1D( "Eta",     500,   -2.5, 2.5 );
+  BookHist1D( "Phi",     640,   -3.2, 3.2 );
+  BookHist1D( "Chi2",     20,   0,     20 );
+  BookHist1D( "D0",      400,   0,      3 );
+  BookHist1D( "DZ",      400, -10,     10 );
+  BookHist1D( "NHits",    40,   0,     40 );
+  BookHist1D( "NMHits",   20,   0,     20 );
+  BookHist1D( "InnerHit", 64,   0,     64 );
+  BookHist1D( "LastBits",  4,   0,      4 );
 }
 
 // Custom analysis helper functions
-const reco::Candidate* FindDarkQuark( const std::vector<reco::GenParticle>& );
-bool                   IsGoodCandidate( const pat::PackedCandidate&, const reco::Candidate* );
+static bool IsGoodCandidate( const pat::PackedCandidate&
+                           , const reco::Candidate* );
 
 void TrackQualityHist::analyze( const edm::Event& event, const edm::EventSetup& )
 {
@@ -64,10 +69,11 @@ void TrackQualityHist::analyze( const edm::Event& event, const edm::EventSetup& 
   if( darkq == 0 ){ return; }// Early Exist for non-dark quark events
 
   unsigned numtrack = 0;
+
   for( const auto& cand : *candHandle ){
     if( !IsGoodCandidate( cand, darkq ) ){ continue; }
 
-    const auto& track = *cand.bestTrack();
+    const auto track = cand.pseudoTrack();
     numtrack++;
 
     // Filling In Track information
@@ -79,55 +85,23 @@ void TrackQualityHist::analyze( const edm::Event& event, const edm::EventSetup& 
     Hist( "DZ" ).Fill( track.dz() );
     Hist( "NHits" ).Fill( track.numberOfValidHits() );
     Hist( "NMHits" ).Fill( track.numberOfLostHits() );
+
+    // The first hit pattern
+    const auto innerhit =
+      track.hitPattern().getHitPattern( reco::HitPattern::TRACK_HITS, 0 );
+
+    Hist( "InnerHit" ).Fill( ( ( innerhit % 1024 ) >> 3 ) - 16 );
+    Hist( "LastBits" ).Fill( innerhit & 3 );
   }
 
-  Hist( "Num" ).Fill( numtrack );
-}
-
-const reco::Candidate* FindDarkQuark( const std::vector<reco::GenParticle>& vec )
-{
-  const reco::Candidate* darkq = 0;
-  const reco::Candidate* smq   = 0;
-
-  for( const auto& gen : vec ){
-    darkq = 0;
-    smq   = 0;
-    if( gen.pdgId() != 4900001 ){continue;}
-    if( gen.numberOfDaughters() <= 1  ){continue;}
-
-    for( unsigned i = 0; i < gen.numberOfDaughters(); ++i ){
-      if( abs( gen.daughter( i )->pdgId() ) <= 6 ){
-        smq = gen.daughter( i );
-        break;
-      }
-    }
-
-    if( !smq ){continue;}
-
-    for( unsigned i = 0; i < gen.numberOfDaughters(); ++i ){
-      if( abs( gen.daughter( i )->pdgId() ) > 4900000 ){
-        darkq = gen.daughter( i );
-
-        while( darkq->daughter( 0 )->pdgId() == darkq->pdgId() ){
-          darkq = darkq->daughter( 0 );
-        }
-
-        break;
-      }
-    }
-
-    if( darkq && smq ){ break; }
-  }
-
-  return darkq;
+  Hist( "TkNum" ).Fill( numtrack );
 }
 
 bool IsGoodCandidate( const pat::PackedCandidate& cand,
                       const reco::Candidate*      darkq )
 {
-  if( !cand.bestTrack() ){ return false;  }
-  const auto& track = *cand.bestTrack();
-  if( deltaR( *darkq, track ) > 0.4 ){ return false; }
+  if( !cand.hasTrackDetails() ){ return false; }
+  if( deltaR( *darkq, cand.pseudoTrack() ) > 0.4 ){ return false; }
 
   return true;
 }
