@@ -1,3 +1,4 @@
+#include "DataFormats/VertexReco/interface/Vertex.h"
 #include "EMJ/QualCheck/interface/EMJGenFinder.hpp"
 
 const reco::Candidate* FindDarkQuark( const std::vector<reco::GenParticle>& vec )
@@ -8,7 +9,7 @@ const reco::Candidate* FindDarkQuark( const std::vector<reco::GenParticle>& vec 
   for( const auto& gen : vec ){
     darkq = 0;
     smq   = 0;
-    if( gen.pdgId() != 4900001 ){continue;}
+    if( abs(gen.pdgId()) != 4900001 ){continue;}
     if( gen.numberOfDaughters() <= 1  ){continue;}
 
     for( unsigned i = 0; i < gen.numberOfDaughters(); ++i ){
@@ -44,7 +45,7 @@ const reco::Candidate* FindSMQuark( const std::vector<reco::GenParticle>& vec )
 
   for( const auto& gen : vec ){
     smq = 0;
-    if( gen.pdgId() != 4900001 ){continue;}
+    if( abs(gen.pdgId()) != 4900001 ){continue;}
     if( gen.numberOfDaughters() <= 1 ){continue;}
 
     for( unsigned i = 0; i < gen.numberOfDaughters(); ++i ){
@@ -66,4 +67,18 @@ const reco::Candidate* FindSMQuark( const std::vector<reco::GenParticle>& vec )
   }
 
   return smq;
+}
+
+
+int GetPrimaryVertex( const std::vector<reco::Vertex>& pvlist )
+{
+  for( unsigned i = 0; i < pvlist.size(); ++i ){
+    const auto& vertex = pvlist.at( i );
+
+    if( vertex.isFake() ){ continue; }
+    if( vertex.z() > 15 ){ continue; }
+    return i;
+  }
+
+  return -1;
 }

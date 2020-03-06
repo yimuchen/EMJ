@@ -1,5 +1,7 @@
 <use name="DataFormats/Candidate"/>
 <use name="DataFormats/HepMCCandidate"/>
+<use name="DataFormats/VertexReco"/>
+<use name="CLHEP"/>
 
 <flags CXXFLAGS="-g -O3"/>
 

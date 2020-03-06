@@ -1,9 +1,10 @@
 #include "UserUtils/EDMUtils/interface/EDHistogramAnalyzer.hpp"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/JetReco/interface/PFJet.h"
 #include "DataFormats/Math/interface/deltaR.h"
-#include "DataFormats/PatCandidates/interface/Jet.h"
-#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+#include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/VertexReco/interface/Vertex.h"
 
 // For tracking information
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -15,11 +16,11 @@
 #include "EMJ/QualCheck/interface/EMJObjectSelect.hpp"
 
 
-class EMJVariablesHist : public usr::EDHistogramAnalyzer
+class EMJVarAOD : public usr::EDHistogramAnalyzer
 {
 public:
-  explicit EMJVariablesHist( const edm::ParameterSet& );
-  ~EMJVariablesHist(){}
+  explicit EMJVarAOD( const edm::ParameterSet& );
+  ~EMJVarAOD(){}
 
   static void fillDescriptions( edm::ConfigurationDescriptions& descriptions );
 
@@ -33,12 +34,11 @@ private:
   // ----------member data ---------------------------
   // tokens
   edm::EDGetToken tok_ak4jet;
-  edm::EDGetToken tok_pfcand;
-  edm::EDGetToken tok_lost;
+  edm::EDGetToken tok_track;
   edm::EDGetToken tok_pv;
   edm::EDGetToken tok_gen;
 
-  bool RunJetVar( const pat::Jet&                          jet,
+  bool RunJetVar( const reco::PFJet&                       jet,
                   const reco::Vertex&                      pv,
                   const std::vector<reco::Track>&          tracks,
                   const std::vector<reco::TransientTrack>& ttracks,
@@ -49,17 +49,16 @@ private:
 //
 // constructors and destructor
 //
-EMJVariablesHist::EMJVariablesHist( const edm::ParameterSet& iConfig ) :
+EMJVarAOD::EMJVarAOD( const edm::ParameterSet& iConfig ) :
   usr::EDHistogramAnalyzer( iConfig ),
-  tok_ak4jet( GetToken<std::vector<pat::Jet> >( "AK4Jet" ) ),
-  tok_pfcand(  GetToken<std::vector<pat::PackedCandidate> >( "PFCandidate" ) ),
-  tok_lost( GetToken<std::vector<pat::PackedCandidate> >( "LostTracks" ) ),
+  tok_ak4jet( GetToken<std::vector<reco::PFJet> >( "AK4Jet" ) ),
+  tok_track(  GetToken<std::vector<reco::Track> >( "Tracks" ) ),
   tok_pv( GetToken<std::vector<reco::Vertex> >( "PrimaryVertex" ) ),
   tok_gen( GetToken<std::vector<reco::GenParticle> >( "GenPart" ) )
 {
 }
 
-void EMJVariablesHist::beginJob()
+void EMJVarAOD::beginJob()
 {
   BookHist1D( "PVTrackF",  100,  0,   1 );
 
@@ -76,11 +75,10 @@ void EMJVariablesHist::beginJob()
 
 // Custom analysis helper functions
 
-static std::vector<reco::Track> MakeTrackedCandidates(
-  const reco::Vertex&                      pv,
-  const std::vector<pat::PackedCandidate>& source1,
-  const std::vector<pat::PackedCandidate>& source2,
-  const TransientTrackBuilder&             ttBuilder );
+static std::vector<reco::Track> SelectTracks(
+  const reco::Vertex&             pv,
+  const std::vector<reco::Track>& tracks,
+  const TransientTrackBuilder&    ttBuilder );
 
 static std::vector<reco::TransientTrack> MakeTTList(
   const std::vector<reco::Track>& track,
@@ -89,19 +87,17 @@ static std::vector<reco::TransientTrack> MakeTTList(
 static double PVTrackFraction( const reco::Vertex&                      vertex,
                                const std::vector<reco::TransientTrack>& tracks );
 
-static bool IsGoodJet( const pat::Jet&, const reco::Candidate* darkq );
+static bool IsGoodJet( const reco::PFJet&, const reco::Candidate* darkq );
 
-void EMJVariablesHist::analyze( const edm::Event&      event,
-                                const edm::EventSetup& setup )
+void EMJVarAOD::analyze( const edm::Event&      event,
+                         const edm::EventSetup& setup )
 {
-  edm::Handle<std::vector<pat::PackedCandidate> > candHandle;
-  edm::Handle<std::vector<pat::PackedCandidate> > trackHandle;
-  edm::Handle<std::vector<reco::GenParticle> > genHandle;
-  edm::Handle<std::vector<pat::Jet> > jetHandle;
+  edm::Handle<std::vector<reco::Track> > trackHandle;
+  edm::Handle<std::vector<reco::PFJet> > jetHandle;
   edm::Handle<std::vector<reco::Vertex> > pvHandle;
+  edm::Handle<std::vector<reco::GenParticle> > genHandle;
 
-  event.getByToken( tok_pfcand, candHandle );
-  event.getByToken( tok_lost,  trackHandle );
+  event.getByToken( tok_track, trackHandle );
   event.getByToken( tok_gen,     genHandle );
   event.getByToken( tok_ak4jet,  jetHandle );
   event.getByToken( tok_pv,       pvHandle );
@@ -116,7 +112,7 @@ void EMJVariablesHist::analyze( const edm::Event&      event,
   const auto smq   = FindSMQuark( *genHandle );
 
   const std::vector<reco::Track> tracklist
-    = MakeTrackedCandidates( pv, *candHandle, *trackHandle, *ttBuilder );
+    = SelectTracks( pv, *trackHandle, *ttBuilder );
   const std::vector<reco::TransientTrack> transTrackList
     = MakeTTList( tracklist, *ttBuilder );
 
@@ -150,8 +146,8 @@ void EMJVariablesHist::analyze( const edm::Event&      event,
   }
 }
 
-bool EMJVariablesHist::RunJetVar(
-  const pat::Jet&                          jet,
+bool EMJVarAOD::RunJetVar(
+  const reco::PFJet&                       jet,
   const reco::Vertex&                      pv,
   const std::vector<reco::Track>&          tracks,
   const std::vector<reco::TransientTrack>& ttracks,
@@ -188,7 +184,7 @@ bool EMJVariablesHist::RunJetVar(
     const double DN  = std::sqrt( ipz*ipz / 0.0001 + ip2d_sig*ip2d_sig );
 
     ip2d_mean += ip2d;
-    if( DN < 4.0 ){
+    if( DN < 10 ){
       alpha3d += track.pt();
     }
     trackpt_sum += track.pt();
@@ -208,44 +204,30 @@ bool EMJVariablesHist::RunJetVar(
   return true;
 }
 
-std::vector<reco::Track> MakeTrackedCandidates(
-  const reco::Vertex&                      pv,
-  const std::vector<pat::PackedCandidate>& source1,
-  const std::vector<pat::PackedCandidate>& source2,
-  const TransientTrackBuilder&             ttBuilder )
+std::vector<reco::Track> SelectTracks(
+  const reco::Vertex&             pv,
+  const std::vector<reco::Track>& source,
+  const TransientTrackBuilder&    ttBuilder )
 {
   std::vector<reco::Track> ans;
 
-  auto GoodTrack
-    = [&pv, &ttBuilder]( const reco::Track& track )->bool {
-        if( track.pt() < 1.0 ){ return false; }
-        // if( !track.quality( reco::TrackBase::highPurity ) ){ return false; }
-        // Calculating impact parameter
-        auto ttrack = ttBuilder.build( track );
-        auto ip3d_p = IPTools::absoluteImpactParameter3D( ttrack, pv );
-        auto ip2d_p = IPTools::absoluteTransverseImpactParameter( ttrack, pv );
+  for( const auto& track : source ){
+    if( track.pt() < 1.0 ){ continue; }
+    // if( !track.quality( reco::TrackBase::highPurity ) ){ continue;  }
+    // Calculating impact parameter
 
-        const double ip3d = ip3d_p.second.value();
-        const double ip2d = ip2d_p.second.value();
-        // const double ip2d_sig = ip2d_p.second.significance();
-        const double ipz = std::sqrt( ip3d*ip3d - ip2d*ip2d );
+    /*
+    auto ttrack = ttBuilder.build( track );
+    auto ip3d_p = IPTools::absoluteImpactParameter3D( ttrack, pv );
+    auto ip2d_p = IPTools::absoluteTransverseImpactParameter( ttrack, pv );
 
-        if( ipz > 2.5 ){ return false; }
+    const double ip3d = ip3d_p.second.value();
+    const double ip2d = ip2d_p.second.value();
+    // const double ip2d_sig = ip2d_p.second.significance();
+    const double ipz = std::sqrt( ip3d*ip3d - ip2d*ip2d );
 
-        return true;
-      };
-
-  for( const auto& cand : source1 ){
-    if( !cand.hasTrackDetails() ){ continue; }
-    const auto track = cand.pseudoTrack();
-    if( !GoodTrack( track ) ){ continue; }
-    ans.push_back( track );
-  }
-
-  for( const auto& cand : source2 ){
-    if( !cand.hasTrackDetails() ){ continue; }
-    const auto track = cand.pseudoTrack();
-    if( !GoodTrack( track ) ){ continue; }
+    // if( ipz > 2.5 ){ continue; }
+    */
     ans.push_back( track );
   }
 
@@ -285,7 +267,7 @@ double PVTrackFraction( const reco::Vertex&                      pv,
 
 }
 
-bool IsGoodJet( const pat::Jet& jet, const reco::Candidate* darkq )
+bool IsGoodJet( const reco::PFJet& jet, const reco::Candidate* darkq )
 {
   // Basic quality cuts
   if( fabs( jet.eta() ) > 2.0 ){ return false; }
@@ -299,23 +281,21 @@ bool IsGoodJet( const pat::Jet& jet, const reco::Candidate* darkq )
 }
 
 
-void EMJVariablesHist::fillDescriptions( edm::ConfigurationDescriptions&
-                                         descriptions )
+void EMJVarAOD::fillDescriptions( edm::ConfigurationDescriptions&
+                                  descriptions )
 {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>(
-    "AK4Jet", edm::InputTag( "slimmedJets" ) );
+    "AK4Jet", edm::InputTag( "ak4PFJetsCHS" ) );
   desc.add<edm::InputTag>(
-    "PFCandidate", edm::InputTag( "packedPFCandidates" ) );
+    "Tracks", edm::InputTag( "generalTracks" ) );
   desc.add<edm::InputTag>(
-    "LostTracks", edm::InputTag( "lostTracks" ) );
+    "PrimaryVertex", edm::InputTag( "offlinePrimaryVertices" ) );
   desc.add<edm::InputTag>(
-    "PrimaryVertex", edm::InputTag( "offlineSlimmedPrimaryVertices" ) );
-  desc.add<edm::InputTag>(
-    "GenPart", edm::InputTag( "prunedGenParticles" ) );
+    "GenPart", edm::InputTag( "genParticles" ) );
 
-  descriptions.add( "EMJVariablesHist", desc );
+  descriptions.add( "EMJVarAOD", desc );
 }
 
 
-DEFINE_FWK_MODULE( EMJVariablesHist );
+DEFINE_FWK_MODULE( EMJVarAOD );

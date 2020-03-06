@@ -4,7 +4,13 @@
 #include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 
-#include "EMJ/QualCheck/interface/EMJGenFinder.hpp"
+#include "EMJ/QualCheck/interface/EMJObjectSelect.hpp"
+
+// For tracking information
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "TrackingTools/IPTools/interface/IPTools.h"
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
+#include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 
 
 class TrackQualityHist : public usr::EDHistogramAnalyzer
@@ -25,7 +31,7 @@ private:
   // ----------member data ---------------------------
   // tokens
   edm::EDGetToken tok_pfcand;
-  edm::EDGetToken tok_genpart;
+  edm::EDGetToken tok_pv;
 };
 
 //
@@ -34,64 +40,71 @@ private:
 TrackQualityHist::TrackQualityHist( const edm::ParameterSet& iConfig ) :
   usr::EDHistogramAnalyzer( iConfig ),
   tok_pfcand(  GetToken<std::vector<pat::PackedCandidate> >( "PFCandidate" ) ),
-  tok_genpart( GetToken<std::vector<reco::GenParticle> >( "GenPart" ) )
+  tok_pv( GetToken<std::vector<reco::Vertex> >( "PrimaryVertex" ) )
 {
 }
 
 void TrackQualityHist::beginJob()
 {
-  BookHist1D( "TkNum",    60,   0,     60 );
-  BookHist1D( "PT",      400,   0,     10 );
-  BookHist1D( "Eta",     500,   -2.5, 2.5 );
-  BookHist1D( "Phi",     640,   -3.2, 3.2 );
-  BookHist1D( "Chi2",     20,   0,     20 );
-  BookHist1D( "D0",      400,   0,      3 );
-  BookHist1D( "DZ",      400, -10,     10 );
-  BookHist1D( "NHits",    40,   0,     40 );
-  BookHist1D( "NMHits",   20,   0,     20 );
-  BookHist1D( "InnerHit", 64,   0,     64 );
-  BookHist1D( "LastBits",  4,   0,      4 );
+  BookHist1D( "TkNum",    500, 0,    500 );
+  BookHist1D( "PT",       400, 0,     10 );
+  BookHist1D( "Eta",      600, -3.0, 3.0 );
+  BookHist1D( "Phi",      640, -3.2, 3.2 );
+  BookHist1D( "Chi2",      20, 0,     20 );
+  BookHist1D( "IP2D",     400, 0,    1.0 );
+  BookHist1D( "IP2D_sig", 400, 0,      5 );
+  BookHist1D( "IPZ",      400, 0,     10 );
+  BookHist1D( "NHits",     40, 0,     40 );
+  BookHist1D( "NPix",       5, 0,      5 );
 }
 
-// Custom analysis helper functions
-static bool IsGoodCandidate( const pat::PackedCandidate&
-                           , const reco::Candidate* );
-
-void TrackQualityHist::analyze( const edm::Event& event, const edm::EventSetup& )
+void TrackQualityHist::analyze( const edm::Event&      event,
+                                const edm::EventSetup& setup )
 {
   edm::Handle<std::vector<pat::PackedCandidate> > candHandle;
-  edm::Handle<std::vector<reco::GenParticle> > genHandle;
+  edm::Handle<std::vector<reco::Vertex> > pvHandle;
+  edm::ESHandle<TransientTrackBuilder> ttBuilder;
 
+  event.getByToken( tok_pv,       pvHandle );
   event.getByToken( tok_pfcand, candHandle );
-  event.getByToken( tok_genpart, genHandle );
+  setup.get<TransientTrackRecord>().get( "TransientTrackBuilder", ttBuilder );
 
-  const auto darkq = FindDarkQuark( *genHandle );
-  if( darkq == 0 ){ return; }// Early Exist for non-dark quark events
+  // Getting the primary vertex
+  const int pv_idx = GetPrimaryVertex( *pvHandle );
+  if( pv_idx < 0 ){ return; }
+  const auto pv = pvHandle->at( pv_idx );
 
   unsigned numtrack = 0;
 
   for( const auto& cand : *candHandle ){
-    if( !IsGoodCandidate( cand, darkq ) ){ continue; }
-
+    if( !cand.hasTrackDetails() ){ continue; }
     const auto track = cand.pseudoTrack();
+    if( track.pt() < 1.0 ){ continue; }
+
     numtrack++;
+
+    const auto ttrack = ttBuilder->build( track );
 
     // Filling In Track information
     Hist( "PT" ).Fill( track.pt() );
     Hist( "Eta" ).Fill( track.eta() );
     Hist( "Phi" ).Fill( track.phi() );
     Hist( "Chi2" ).Fill( track.normalizedChi2() );
-    Hist( "D0" ).Fill( track.d0() );
-    Hist( "DZ" ).Fill( track.dz() );
     Hist( "NHits" ).Fill( track.numberOfValidHits() );
-    Hist( "NMHits" ).Fill( track.numberOfLostHits() );
+    Hist( "NPix" ).Fill( track.hitPattern().numberOfValidPixelHits() );
 
-    // The first hit pattern
-    const auto innerhit =
-      track.hitPattern().getHitPattern( reco::HitPattern::TRACK_HITS, 0 );
+    // Impact parameter information
+    auto ip3d_p = IPTools::absoluteImpactParameter3D( ttrack, pv );
+    auto ip2d_p = IPTools::absoluteTransverseImpactParameter( ttrack, pv );
 
-    Hist( "InnerHit" ).Fill( ( ( innerhit % 1024 ) >> 3 ) - 16 );
-    Hist( "LastBits" ).Fill( innerhit & 3 );
+    const double ip3d = ip3d_p.second.value();
+    const double ip2d = ip2d_p.second.value();
+    // const double ip2d_sig = ip2d_p.second.significance();
+    const double ipz = std::sqrt( ip3d*ip3d - ip2d*ip2d );
+
+    Hist( "IP2D" ).Fill( ip2d );
+    Hist( "IPZ" ).Fill( ipz );
+    Hist( "IP2D_sig" ).Fill( ip2d_p.second.significance() );
   }
 
   Hist( "TkNum" ).Fill( numtrack );
@@ -113,7 +126,7 @@ void TrackQualityHist::fillDescriptions( edm::ConfigurationDescriptions&
   desc.add<edm::InputTag>(
     "PFCandidate", edm::InputTag( "packedPFCandidates" ) );
   desc.add<edm::InputTag>(
-    "GenPart", edm::InputTag( "prunedGenParticles" ) );
+    "PrimaryVertex", edm::InputTag( "offlineSlimmedPrimaryVertices" ) );
 
   descriptions.add( "TrackQualityHist", desc );
 }

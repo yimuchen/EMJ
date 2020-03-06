@@ -1,0 +1,61 @@
+{
+  "plots" : [
+    {
+      "name": "DN",
+      "xaxis" : "Normalized Impact Significance (D_{N}) of tracks in jet",
+      "xunit" : "",
+      "yaxis" : "Number of Tracks",
+      "logy"  : true
+    },
+    {
+      "name": "LogIP2D",
+      "xaxis" : "Log_{10}#LT IP_{2D,sig} #GT",
+      "xunit" : "",
+      "yaxis" : "Number of Jets"
+    },
+    {
+      "name": "Alpha3D",
+      "xaxis" : "#alpha_{3D} (D_{N,cutoff} = 4)",
+      "xunit" : "",
+      "yaxis" : "Number of Jets"
+    },
+    {
+      "name": "NumTk",
+      "xaxis": "Number of selected track associated with jet",
+      "xunit": "",
+      "yaxis": "Number of Jets"
+    }
+  ],
+  "signals": [
+    {
+      "display": "c#tau=5mm (dark quark)",
+      "file": "emj_tauDPi5.root",
+      "key prefix": "EMJVariablesHist/DQ_",
+      "color": "#0000FF"
+    },
+    {
+      "display": "c#tau=5mm (SM quark)",
+      "file": "emj_tauDPi5.root",
+      "key prefix": "EMJVariablesHist/SM_",
+      "color": "#0066FF"
+    },
+    {
+      "display": "c#tau=50mm (dark quark)",
+      "file": "emj_tauDPi50.root",
+      "key prefix": "EMJVariablesHist/DQ_",
+      "color": "#FF0000"
+    },
+    {
+      "display": "c#tau=50mm (SM quark)",
+      "file": "emj_tauDPi50.root",
+      "key prefix": "EMJVariablesHist/SM_",
+      "color": "#FF6600"
+    },
+    {
+      "display": "QCD (leading jet)",
+      "file": "QQ_EMJVar.root",
+      "key prefix": "EMJVariablesHist/DQ_",
+      "color": "#006600"
+    }
+  ]
+}
