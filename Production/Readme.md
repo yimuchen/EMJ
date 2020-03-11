@@ -171,5 +171,65 @@ python submitJobs.py -p                                              \
        --config EMJ.Production.2017UL.emj_step5_MINIAOD -s           \
       --indir=/data/users/yichen/EmergingJets/LocalProduction/output \
       --redir=""   --inpre=step4_AOD
+```
 
+# LPC 2017UL
+
+```bash
+# GEN ONLY
+python submitJobs.py -p                                                    \
+       -o root://cmseos.fnal.gov//store/user/yimuchen/EmergingJets/2017UL2 \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py           \
+       -E 500 -N 20                                                        \
+       --outpre step0_GEN                                                  \
+       --config EMJ.Production.2017UL.emj_step0_GEN -s
+
+# SIM ONLY
+python submitJobs.py -p                                                    \
+       -o root://cmseos.fnal.gov//store/user/yimuchen/EmergingJets/2017UL2 \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py           \
+       -E 500 -N 20                                                        \
+       --outpre step1_SIM                                                  \
+       --config EMJ.Production.2017UL.emj_step1_SIM -s                     \
+      --indir=/store/user/yimuchen/EmergingJets/2017UL2                    \
+      --redir="root://cmseos.fnal.gov/"  --inpre=step0_GEN
+
+# DIGI ONLY
+python submitJobs.py -p                                                    \
+       -o root://cmseos.fnal.gov//store/user/yimuchen/EmergingJets/2017UL2 \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py           \
+       -E 500 -N 20                                                        \
+       --outpre step2_DIGI                                                 \
+       --config EMJ.Production.2017UL.emj_step2_DIGI -s                    \
+      --indir=/store/user/yimuchen/EmergingJets/2017UL2                    \
+      --redir="root://cmseos.fnal.gov/"  --inpre=step1_SIM  --memory=4000
+# HLT
+python submitJobs.py -p                                                    \
+       -o root://cmseos.fnal.gov//store/user/yimuchen/EmergingJets/2017UL2 \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py           \
+       -E 500 -N 20                                                        \
+       --outpre step3_HLT                                                  \
+       --config EMJ.Production.2017UL.emj_step3_HLT -s                     \
+      --indir=/store/user/yimuchen/EmergingJets/2017UL2                    \
+      --redir="root://cmseos.fnal.gov/"   --inpre=step2_DIGI --memory=4000
+
+# Reco
+python submitJobs.py -p                                                    \
+       -o root://cmseos.fnal.gov//store/user/yimuchen/EmergingJets/2017UL2 \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py           \
+       -E 500 -N 20                                                        \
+       --outpre step4_AOD                                                  \
+       --config EMJ.Production.2017UL.emj_step4_AOD -s                     \
+      --indir=/store/user/yimuchen/EmergingJets/2017UL2                    \
+      --redir="root://cmseos.fnal.gov/"   --inpre=step3_HLT --memory=4000
+
+# MINIAOD
+python submitJobs.py -p                                                    \
+       -o root://cmseos.fnal.gov//store/user/yimuchen/EmergingJets/2017UL2 \
+       -d $CMSSW_BASE/src/EMJ/Production/data/gen_signal_test.py           \
+       -E 500 -N 20                                                        \
+       --outpre step5_MINIAOD                                              \
+       --config EMJ.Production.2017UL.emj_step5_MINIAOD -s                 \
+       --indir=/store/user/yimuchen/EmergingJets/2017UL2                   \
+      --redir="root://cmseos.fnal.gov/"   --inpre=step4_AOD --memory=4000
 ```
