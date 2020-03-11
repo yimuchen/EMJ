@@ -11,9 +11,12 @@
 #include "TrackingTools/Records/interface/TransientTrackRecord.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 
+#include "DataFormats/GeometrySurface/interface/Line.h"
+
 
 #include "EMJ/QualCheck/interface/EMJObjectSelect.hpp"
 
+#include "TLorentzVector.h"
 
 class EMJVariablesHist : public usr::EDHistogramAnalyzer
 {
@@ -35,6 +38,7 @@ private:
   edm::EDGetToken tok_ak4jet;
   edm::EDGetToken tok_pfcand;
   edm::EDGetToken tok_lost;
+  edm::EDGetToken tok_disp;
   edm::EDGetToken tok_pv;
   edm::EDGetToken tok_gen;
 
@@ -54,6 +58,7 @@ EMJVariablesHist::EMJVariablesHist( const edm::ParameterSet& iConfig ) :
   tok_ak4jet( GetToken<std::vector<pat::Jet> >( "AK4Jet" ) ),
   tok_pfcand(  GetToken<std::vector<pat::PackedCandidate> >( "PFCandidate" ) ),
   tok_lost( GetToken<std::vector<pat::PackedCandidate> >( "LostTracks" ) ),
+  tok_disp( GetToken<std::vector<reco::Track> >( "DisplacedTracks" ) ),
   tok_pv( GetToken<std::vector<reco::Vertex> >( "PrimaryVertex" ) ),
   tok_gen( GetToken<std::vector<reco::GenParticle> >( "GenPart" ) )
 {
@@ -80,6 +85,7 @@ static std::vector<reco::Track> MakeTrackedCandidates(
   const reco::Vertex&                      pv,
   const std::vector<pat::PackedCandidate>& source1,
   const std::vector<pat::PackedCandidate>& source2,
+  const std::vector<reco::Track>&          source3,
   const TransientTrackBuilder&             ttBuilder );
 
 static std::vector<reco::TransientTrack> MakeTTList(
@@ -96,6 +102,7 @@ void EMJVariablesHist::analyze( const edm::Event&      event,
 {
   edm::Handle<std::vector<pat::PackedCandidate> > candHandle;
   edm::Handle<std::vector<pat::PackedCandidate> > trackHandle;
+  edm::Handle<std::vector<reco::Track> > dtrackHandle;
   edm::Handle<std::vector<reco::GenParticle> > genHandle;
   edm::Handle<std::vector<pat::Jet> > jetHandle;
   edm::Handle<std::vector<reco::Vertex> > pvHandle;
@@ -105,6 +112,7 @@ void EMJVariablesHist::analyze( const edm::Event&      event,
   event.getByToken( tok_gen,     genHandle );
   event.getByToken( tok_ak4jet,  jetHandle );
   event.getByToken( tok_pv,       pvHandle );
+  event.getByToken( tok_disp, dtrackHandle );
 
   edm::ESHandle<TransientTrackBuilder> ttBuilder;
   setup.get<TransientTrackRecord>().get( "TransientTrackBuilder", ttBuilder );
@@ -116,7 +124,8 @@ void EMJVariablesHist::analyze( const edm::Event&      event,
   const auto smq   = FindSMQuark( *genHandle );
 
   const std::vector<reco::Track> tracklist
-    = MakeTrackedCandidates( pv, *candHandle, *trackHandle, *ttBuilder );
+    = MakeTrackedCandidates( pv, *candHandle, *trackHandle
+                           , *dtrackHandle,  *ttBuilder );
   const std::vector<reco::TransientTrack> transTrackList
     = MakeTTList( tracklist, *ttBuilder );
 
@@ -150,6 +159,11 @@ void EMJVariablesHist::analyze( const edm::Event&      event,
   }
 }
 
+static bool TrackMatchJet( const pat::Jet& jet,
+                           const reco::Vertex& pv,
+                           const reco::TransientTrack& track );
+
+
 bool EMJVariablesHist::RunJetVar(
   const pat::Jet&                          jet,
   const reco::Vertex&                      pv,
@@ -158,6 +172,9 @@ bool EMJVariablesHist::RunJetVar(
   const std::string&                       prefix  )
 {
   assert( tracks.size() == ttracks.size() );
+
+  const math::XYZVector jet_p = jet.momentum();
+  const GlobalVector direction( jet_p.x(), jet_p.y(), jet_p.z() );
 
   unsigned ntracks   = 0;
   double ip2d_mean   = 0;
@@ -169,9 +186,9 @@ bool EMJVariablesHist::RunJetVar(
     const auto& ttrack = ttracks.at( i );
 
     // Additional track selection
-    if( deltaR( track, jet ) > 0.4 ){ continue; }
+    if( !TrackMatchJet( jet, pv, ttrack ) ){ continue; }
     // If track takes up too much of the jet.
-    if( track.pt() > jet.pt() * 0.6 ){ return false; }
+    if( track.pt() > jet.pt() * 0.8 ){ continue; }
 
     ++ntracks;
 
@@ -196,10 +213,13 @@ bool EMJVariablesHist::RunJetVar(
     Hist( prefix + "DN" ).Fill( DN );
   }
 
-  if( ntracks == 0 ){ return false; }
-
-  ip2d_mean /= ntracks;
-  alpha3d   /= trackpt_sum;
+  if( ntracks == 0 ){
+    ip2d_mean = 1e-8 ;
+    alpha3d = 0 ;
+  } else {
+    ip2d_mean /= ntracks;
+    alpha3d   /= trackpt_sum;
+  }
 
   Hist( prefix + "LogIP2D" ).Fill( std::log( ip2d_mean )/std::log( 10 ) );
   Hist( prefix + "NumTk" ).Fill( ntracks );
@@ -208,10 +228,46 @@ bool EMJVariablesHist::RunJetVar(
   return true;
 }
 
+static bool TrackMatchJet( const pat::Jet& jet,
+                          const reco::Vertex& pv ,
+                            const reco::TransientTrack& ttrack )
+{
+    const GlobalVector direction(jet.momentum().x()
+                                , jet.momentum().y()
+                                , jet.momentum().z());
+    TrajectoryStateOnSurface pca = IPTools::closestApproachToJet(
+      ttrack.impactPointState(), pv, direction, ttrack.field() );
+
+    if( !pca.isValid() ){ return false;}
+
+    const GlobalPoint closestPoint = pca.globalPosition();
+
+    if( !( std::isfinite( closestPoint.x() )
+           && std::isfinite( closestPoint.y() )
+           && std::isfinite( closestPoint.z() ) ) ){
+      return false;
+    }
+
+    const TLorentzVector trackVector(
+      closestPoint.x() - pv.position().x(),
+      closestPoint.y() - pv.position().y(),
+      closestPoint.z() - pv.position().z(),
+      ttrack.track().p() );
+
+    // Additional track selection
+    if( deltaR( trackVector.Eta(), trackVector.Phi()
+                , jet.eta(), jet.phi() ) > 0.4 ){ return false; }
+    if( deltaR( ttrack.track(), jet ) > 1.5 ){ return false; }
+
+    return true;
+}
+
+
 std::vector<reco::Track> MakeTrackedCandidates(
   const reco::Vertex&                      pv,
   const std::vector<pat::PackedCandidate>& source1,
   const std::vector<pat::PackedCandidate>& source2,
+  const std::vector<reco::Track>&          source3,
   const TransientTrackBuilder&             ttBuilder )
 {
   std::vector<reco::Track> ans;
@@ -219,7 +275,7 @@ std::vector<reco::Track> MakeTrackedCandidates(
   auto GoodTrack
     = [&pv, &ttBuilder]( const reco::Track& track )->bool {
         if( track.pt() < 1.0 ){ return false; }
-        // if( !track.quality( reco::TrackBase::highPurity ) ){ return false; }
+        if( !track.quality( reco::TrackBase::highPurity ) ){ return false; }
         // Calculating impact parameter
         auto ttrack = ttBuilder.build( track );
         auto ip3d_p = IPTools::absoluteImpactParameter3D( ttrack, pv );
@@ -246,6 +302,11 @@ std::vector<reco::Track> MakeTrackedCandidates(
     if( !cand.hasTrackDetails() ){ continue; }
     const auto track = cand.pseudoTrack();
     if( !GoodTrack( track ) ){ continue; }
+    ans.push_back( track );
+  }
+
+  for( const auto& track : source3 ){
+    if( !GoodTrack( track ) ){continue; }
     ans.push_back( track );
   }
 
@@ -309,6 +370,8 @@ void EMJVariablesHist::fillDescriptions( edm::ConfigurationDescriptions&
     "PFCandidate", edm::InputTag( "packedPFCandidates" ) );
   desc.add<edm::InputTag>(
     "LostTracks", edm::InputTag( "lostTracks" ) );
+  desc.add<edm::InputTag>(
+    "DisplacedTracks", edm::InputTag( "displacedStandAloneMuons" ) );
   desc.add<edm::InputTag>(
     "PrimaryVertex", edm::InputTag( "offlineSlimmedPrimaryVertices" ) );
   desc.add<edm::InputTag>(

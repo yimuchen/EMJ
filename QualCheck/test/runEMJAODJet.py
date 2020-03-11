@@ -5,12 +5,12 @@ options = VarParsing('analysis')
 options.outputFile = 'EMJVar_AOD_output.root'
 options.parseArguments()
 
-process = cms.Process("EMJVarAOD")
+process = cms.Process("EMJAODJet")
 
 process.load("Configuration.StandardSequences.Services_cff")
 
 # Auto generated from descriptions
-process.load("EMJ.QualCheck.EMJVarAOD_cfi")
+process.load("EMJ.QualCheck.EMJAODJet_cfi")
 
 process.maxEvents = cms.untracked.PSet(
     input=cms.untracked.int32(options.maxEvents))
@@ -35,4 +35,4 @@ process.load("TrackingTools/TransientTrack/TransientTrackBuilder_cfi")
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.MessageLogger.cerr.FwkReport.reportEvery = 100
 
-process.p1 = cms.Path(process.EMJVarAOD)
+process.p1 = cms.Path(process.EMJAODJet)

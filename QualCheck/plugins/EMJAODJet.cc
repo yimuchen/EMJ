@@ -17,11 +17,11 @@
 #include "EMJ/QualCheck/interface/EMJObjectSelect.hpp"
 
 
-class EMJVarAOD : public usr::EDHistogramAnalyzer
+class EMJAODJet : public usr::EDHistogramAnalyzer
 {
 public:
-  explicit EMJVarAOD( const edm::ParameterSet& );
-  ~EMJVarAOD(){}
+  explicit EMJAODJet( const edm::ParameterSet& );
+  ~EMJAODJet(){}
 
   static void fillDescriptions( edm::ConfigurationDescriptions& descriptions );
 
@@ -37,38 +37,27 @@ private:
   edm::EDGetToken tok_ak4jet;
   edm::EDGetToken tok_pv;
   edm::EDGetToken tok_gen;
-  edm::EDGetToken tok_pf;
 
-  std::vector<edm::EDGetToken> tokens_track;
-
-  bool RunJetVar( const reco::PFJet&                       jet,
-                  const reco::Vertex&                      pv,
-                  const std::vector<reco::Track>&          tracks,
-                  const std::vector<reco::TransientTrack>& ttracks,
-                  const std::string&                       prefix  );
+  bool RunJetVar( const reco::PFJet&           jet,
+                  const reco::Vertex&          pv,
+                  const std::string&           prefix,
+                  const TransientTrackBuilder& ttBuilder  );
 
 };
 
 //
 // constructors and destructor
 //
-EMJVarAOD::EMJVarAOD( const edm::ParameterSet& iConfig ) :
+EMJAODJet::EMJAODJet( const edm::ParameterSet& iConfig ) :
   usr::EDHistogramAnalyzer( iConfig ),
   tok_ak4jet( GetToken<std::vector<reco::PFJet> >( "AK4Jet" ) ),
   tok_pv( GetToken<std::vector<reco::Vertex> >( "PrimaryVertex" ) ),
-  tok_gen( GetToken<std::vector<reco::GenParticle> >( "GenPart" ) ),
-  tok_pf( GetToken<std::vector<reco::PFCandidate> >( "ParticleFlow" ) )
+  tok_gen( GetToken<std::vector<reco::GenParticle> >( "GenPart" ) )
 {
-  for( const auto tag :
-       iConfig.getParameter<std::vector<edm::InputTag> >( "TrackCollections" ) ){
-    tokens_track.push_back( consumes<std::vector<reco::Track> >( tag ) );
-  }
 }
 
-void EMJVarAOD::beginJob()
+void EMJAODJet::beginJob()
 {
-  BookHist1D( "PVTrackF",  100,  0,   1 );
-
   BookHist1D( "DQ_DN",     100,  0, 100 );
   BookHist1D( "DQ_LogIP2D", 24, -5,   1 );
   BookHist1D( "DQ_NumTk",   50,  0,  50 );
@@ -81,41 +70,18 @@ void EMJVarAOD::beginJob()
 }
 
 // Custom analysis helper functions
-
-static void AppendTracks(
-  std::vector<reco::Track>&       selected_tracks,
-  const reco::Vertex&             pv,
-  const std::vector<reco::Track>& tracks,
-  const TransientTrackBuilder&    ttBuilder );
-
-static void AppendTracks(
-  std::vector<reco::Track>&             selected_tracks,
-  const reco::Vertex&                   pv,
-  const std::vector<reco::PFCandidate>& tracks,
-  const TransientTrackBuilder&          ttBuilder );
-
-static std::vector<reco::TransientTrack> MakeTTList(
-  const std::vector<reco::Track>& track,
-  const TransientTrackBuilder&    ttBuilder  );
-
-static double PVTrackFraction( const reco::Vertex&                      vertex,
-                               const std::vector<reco::TransientTrack>& tracks );
-
 static bool IsGoodJet( const reco::PFJet&, const reco::Candidate* darkq );
 
-void EMJVarAOD::analyze( const edm::Event&      event,
+void EMJAODJet::analyze( const edm::Event&      event,
                          const edm::EventSetup& setup )
 {
-  edm::Handle<std::vector<reco::Track> > trackHandle;
   edm::Handle<std::vector<reco::PFJet> > jetHandle;
   edm::Handle<std::vector<reco::Vertex> > pvHandle;
   edm::Handle<std::vector<reco::GenParticle> > genHandle;
-  edm::Handle<std::vector<reco::PFCandidate> > pfHandle;
 
   event.getByToken( tok_gen,    genHandle );
   event.getByToken( tok_ak4jet, jetHandle );
   event.getByToken( tok_pv,      pvHandle );
-  event.getByToken( tok_pf,      pfHandle );
 
   edm::ESHandle<TransientTrackBuilder> ttBuilder;
   setup.get<TransientTrackRecord>().get( "TransientTrackBuilder", ttBuilder );
@@ -126,23 +92,8 @@ void EMJVarAOD::analyze( const edm::Event&      event,
   const auto darkq = FindDarkQuark( *genHandle );
   const auto smq   = FindSMQuark( *genHandle );
 
-  // Creating master list
-  std::vector<reco::Track> tracklist;
-
-  for( const auto& token : tokens_track ){
-    event.getByToken( token, trackHandle );
-    AppendTracks( tracklist, pv, *trackHandle, *ttBuilder );
-  }
-
-  AppendTracks( tracklist, pv, *pfHandle, *ttBuilder );
-
-  const std::vector<reco::TransientTrack> transTrackList
-    = MakeTTList( tracklist, *ttBuilder );
-
   bool found_darkq = false;
   bool found_smq   = false;
-
-  Hist( "PVTrackF" ).Fill( PVTrackFraction( pv, transTrackList ) );
 
   for( auto& jet : *jetHandle ){
     std::string prefix = "";
@@ -157,7 +108,7 @@ void EMJVarAOD::analyze( const edm::Event&      event,
     }
 
     // Getting Tracks associated with jets ;
-    if( !RunJetVar( jet, pv, tracklist, transTrackList, prefix ) ){
+    if( !RunJetVar( jet, pv, prefix, *ttBuilder ) ){
       if( prefix == "DQ_" ){ found_darkq = false; }
       if( prefix == "SM_" ){ found_smq = false; }
       continue;
@@ -168,28 +119,24 @@ void EMJVarAOD::analyze( const edm::Event&      event,
   }
 }
 
-bool EMJVarAOD::RunJetVar(
-  const reco::PFJet&                       jet,
-  const reco::Vertex&                      pv,
-  const std::vector<reco::Track>&          tracks,
-  const std::vector<reco::TransientTrack>& ttracks,
-  const std::string&                       prefix  )
+bool EMJAODJet::RunJetVar(
+  const reco::PFJet&           jet,
+  const reco::Vertex&          pv,
+  const std::string&           prefix,
+  const TransientTrackBuilder& ttBuilder   )
 {
-  assert( tracks.size() == ttracks.size() );
-
   unsigned ntracks   = 0;
   double ip2d_mean   = 0;
   double alpha3d     = 0;
   double trackpt_sum = 0;
 
-  for( unsigned i = 0; i < tracks.size(); ++i ){
-    const auto& track  = tracks.at( i );
-    const auto& ttrack = ttracks.at( i );
+  if( jet.getTrackRefs().isNull() ){ return false; }
+  if( jet.getTrackRefs().size() < 1 ){ return false; }
 
-    // Additional track selection
-    if( deltaR( track, jet ) > 0.6 ){ continue; }
-    // If track takes up too much of the jet.
-    if( track.pt() > jet.pt() * 0.6 ){ return false; }
+  for( const auto& track : jet.getTrackRefs() ){
+    if( track->pt() > jet.pt() * 0.6 ){ return false; }
+    if( track->pt() < 1.0 ){ continue; }
+    const auto ttrack = ttBuilder.build( *track );
 
     ++ntracks;
 
@@ -207,9 +154,9 @@ bool EMJVarAOD::RunJetVar(
 
     ip2d_mean += ip2d;
     if( DN < 4 ){
-      alpha3d += track.pt();
+      alpha3d += track->pt();
     }
-    trackpt_sum += track.pt();
+    trackpt_sum += track->pt();
 
     Hist( prefix + "DN" ).Fill( DN );
   }
@@ -234,10 +181,10 @@ void AppendTracks(
 {
   for( const auto& track : source ){
     if( track.pt() < 1.0 ){ continue; }
-    if( !track.quality( reco::TrackBase::highPurity ) ){ continue;  }
+    // if( !track.quality( reco::TrackBase::highPurity ) ){ continue;  }
     // Calculating impact parameter
 
-
+    /*
        auto ttrack = ttBuilder.build( track );
        auto ip3d_p = IPTools::absoluteImpactParameter3D( ttrack, pv );
        auto ip2d_p = IPTools::absoluteTransverseImpactParameter( ttrack, pv );
@@ -248,6 +195,7 @@ void AppendTracks(
        const double ipz = std::sqrt( ip3d*ip3d - ip2d*ip2d );
 
        if( ipz > 2.5 ){ continue; }
+     */
 
     selectedTracks.push_back( track );
   }
@@ -263,9 +211,10 @@ void AppendTracks(
     if( pf.trackRef().isNull() || !pf.trackRef().isAvailable() ){ continue; }
     const auto track = *pf.trackRef();
     if( track.pt() < 1.0 ){ continue; }
-    if( !track.quality( reco::TrackBase::highPurity ) ){ continue;  }
+    // if( !track.quality( reco::TrackBase::highPurity ) ){ continue;  }
     // Calculating impact parameter
 
+    /*
        auto ttrack = ttBuilder.build( track );
        auto ip3d_p = IPTools::absoluteImpactParameter3D( ttrack, pv );
        auto ip2d_p = IPTools::absoluteTransverseImpactParameter( ttrack, pv );
@@ -276,6 +225,7 @@ void AppendTracks(
        const double ipz = std::sqrt( ip3d*ip3d - ip2d*ip2d );
 
        if( ipz > 2.5 ){ continue; }
+     */
 
     selectedTracks.push_back( track );
   }
@@ -313,7 +263,7 @@ double PVTrackFraction( const reco::Vertex&                      pv,
     if( ipz < 0.01 ){ ++passed; }
   }
 
-  return double(passed)/double(tracks.size() );
+  return double(passed)/double( tracks.size() );
 
 }
 
@@ -331,25 +281,19 @@ bool IsGoodJet( const reco::PFJet& jet, const reco::Candidate* darkq )
 }
 
 
-void EMJVarAOD::fillDescriptions( edm::ConfigurationDescriptions&
+void EMJAODJet::fillDescriptions( edm::ConfigurationDescriptions&
                                   descriptions )
 {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>(
     "AK4Jet", edm::InputTag( "ak4PFJetsCHS" ) );
-  desc.add<std::vector<edm::InputTag> >(
-    "TrackCollections", {
-    //{ edm::InputTag( "generalTracks" )
-    //                      , edm::InputTag( "displacedTracks" )
-    });
-  desc.add<edm::InputTag>( "ParticleFlow", edm::InputTag( "particleFlow" ) );
   desc.add<edm::InputTag>(
     "PrimaryVertex", edm::InputTag( "offlinePrimaryVertices" ) );
   desc.add<edm::InputTag>(
     "GenPart", edm::InputTag( "genParticles" ) );
 
-  descriptions.add( "EMJVarAOD", desc );
+  descriptions.add( "EMJAODJet", desc );
 }
 
 
-DEFINE_FWK_MODULE( EMJVarAOD );
+DEFINE_FWK_MODULE( EMJAODJet );
