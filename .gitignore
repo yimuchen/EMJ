@@ -1,26 +1,6 @@
-# General C++ exclusion
-*.o
-*.so
-
-# General Python exclusion
-*.pyc
-
-# Swap files
-*.swp
-
-# General data file exclusions
-*.txt
-*.root
-*.log
-log*
-
-
-# Specific file exclusion
-# [relative/path/to/file]
-**/__init__*.py
-.vscode/**
-
-# Specific file inclusion
-# ![relative/path/to/file]
-
+# Ignore everything Other than the required files 
+*
+!.gitignore
+!Readme.md
+!installEMJ.sh
 
