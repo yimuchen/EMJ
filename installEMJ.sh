@@ -136,13 +136,10 @@ function installOthers(){
   esac
 
   $ECHO "Getting all Condor scripts..."
-  git clone https://github.com/kpedro88/CondorProduction Condor/Production >/dev/null 2>&1
+  git clone https://github.com/kpedro88/CondorProduction Condor/Production > /dev/null 2>&1
 
   $ECHO "Getting EMJ core code..."
-  git clone https://gitlab.cern.ch/yichen/EMJ.git -b $EMJ_BRANCH > /dev/null 2>&1
-
-  $ECHO "Getting CMSSW Augment libraries..."
-  git clone https://github.com/yimuchen/UserUtils > /dev/null 2>&1
+  git clone https://gitlab.cern.ch/cms-emj/emj-production EMJ/Production > /dev/null 2>&1
 }
 
 
