@@ -30,13 +30,10 @@ function usage() {
 }
 
 function parserArgument() {
-  while getopts "c:b:s:h" opt; do
+  while getopts "c:s:h" opt; do
     case "$opt" in
     c)
       CMSSW_RELEASE=$OPTARG
-      ;;
-    b)
-      PYTHIA_BRANCH=$OPTARG
       ;;
     s)
       PYTHIA_SOURCE=$OPTARG
@@ -46,6 +43,14 @@ function parserArgument() {
       ;;
     esac
   done
+
+  if [[ $CMSSW_RELEASE == "CMSSW_10_2_"* ]]; then
+    export PYTHIA_BRANCH="emg/230"
+  elif [[ $CMSSW_RELEASE == "CMSSW_9_3_"* ]]; then
+    export PYTHIA_BRANCH="emg/230"
+  elif [[ $CMSSW_RELEASE == "CMSSW_7_1_"* ]]; then
+    export PYTHIA_BRANCH="emg/226"
+  fi
 }
 
 function installCMSSW() {
@@ -92,10 +97,9 @@ function installPythia() {
   CMSSW_8_0_*) # For 2016 RECO
     return 0
     ;;
-  *)
-    ;;
-  esac
+  *) ;;
 
+  esac
 
   ## Getting the same libraries as the CMSSW tool
   cd ${CMSSW_BASE}
@@ -105,7 +109,7 @@ function installPythia() {
 
   ## Getting and compiling the modified pythia stuff
   $ECHO "Getting pythia8"
-  git clone "https://github.com/${PYTHIA_SOURCE}/pythia8.git" -b ${PYTHIA_BRANCH} > /dev/null 2>&1
+  git clone "https://github.com/${PYTHIA_SOURCE}/pythia8.git" -b ${PYTHIA_BRANCH} >/dev/null 2>&1
 
   $ECHO "Compiling custom pythia8"
   cd ${CMSSW_BASE}/pythia8
@@ -115,7 +119,7 @@ function installPythia() {
     --with-lhapdf6=${LHAPDF_BASE} \
     --with-lhapdf6-plugin=LHAPDF6.h
 
-  make -j $(($(nproc) / 2)) > /dev/null 2>&1
+  make -j $(($(nproc) / 2)) >/dev/null 2>&1
   make install >/dev/null 2>&1
   cd ${CMSSW_BASE}
 
@@ -135,7 +139,7 @@ function installPythia() {
 EOF_TOOLFILE
 
   $ECHO "Modifying CMSSW to use new pythia8.."
-  scram setup pythia8 > /dev/null 2>&1
+  scram setup pythia8 >/dev/null 2>&1
 
   # Generating dependencies package
   scram b echo_pythia8_USED_BY |
@@ -149,7 +153,7 @@ EOF_TOOLFILE
   git cms-addpkg -f ${CMSSW_BASE}/pkgs.txt
 }
 
-function installOthers(){
+function installOthers() {
   EMJ_BRANCH="master"
   case "$CMSSW_RELEASE" in
   CMSSW_10_2_*)
@@ -158,12 +162,11 @@ function installOthers(){
   esac
 
   $ECHO "Getting all Condor scripts..."
-  git clone https://github.com/kpedro88/CondorProduction Condor/Production > /dev/null 2>&1
+  git clone https://github.com/kpedro88/CondorProduction Condor/Production >/dev/null 2>&1
 
   $ECHO "Getting EMJ core code..."
-  git clone https://gitlab.cern.ch/cms-emj/emj-production EMJ/Production > /dev/null 2>&1
+  git clone https://gitlab.cern.ch/cms-emj/emj-production EMJ/Production >/dev/null 2>&1
 }
-
 
 ## Calling the main function
 main $@
