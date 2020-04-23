@@ -50,8 +50,17 @@ function parserArgument() {
 
 function installCMSSW() {
   case "$CMSSW_RELEASE" in
-  CMSSW_10_2_*)
+  CMSSW_10_2_*) # For 2018 GEN and RECO
     export SCRAM_ARCH="slc6_amd64_gcc700"
+    ;;
+  CMSSW_9_*) # For 2017 GEN and RECO
+    export SCRAM_ARCH="slc6_amd64_gcc630"
+    ;;
+  CMSSW_8_0_*) # For 2016 RECO
+    export SCRAM_ARCH="slc6_amd64_gcc530"
+    ;;
+  CMSSW_7_1_*) # For 2016 GEN
+    export SCRAM_ARCH="slc6_amd64_gcc481"
     ;;
   *)
     $ECHO "UNSUPPORTED CMSSW RELEASE! Exiting..."
@@ -75,6 +84,19 @@ function installCMSSW() {
 }
 
 function installPythia() {
+  ## Skipping pythia installation for non-gen releases
+  case "$CMSSW_RELEASE" in
+  CMSSW_9_4_*) # For 2017 RECO
+    return 0
+    ;;
+  CMSSW_8_0_*) # For 2016 RECO
+    return 0
+    ;;
+  *)
+    ;;
+  esac
+
+
   ## Getting the same libraries as the CMSSW tool
   cd ${CMSSW_BASE}
   HEPMC_BASE=$(scram tool info hepmc | grep "HEPMC_BASE" | sed 's/HEPMC_BASE=//')
