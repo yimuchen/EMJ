@@ -12,6 +12,9 @@ PYTHIA_SOURCE="kpedro88"
 
 function main() {
   parserArgument $@
+
+  clonePackages
+
   installCMSSW
   installPythia
   installOthers
@@ -53,7 +56,7 @@ function parserArgument() {
   fi
 }
 
-function installCMSSW() {
+function clonePackages() {
   case "$CMSSW_RELEASE" in
   CMSSW_10_2_*) # For 2018 GEN and RECO
     export SCRAM_ARCH="slc6_amd64_gcc700"
@@ -76,6 +79,26 @@ function installCMSSW() {
   source /cvmfs/cms.cern.ch/cmsset_default.sh
   scramv1 project CMSSW $CMSSW_RELEASE
   cd $CMSSW_RELEASE
+
+  ## Loading in a funny version of git
+  GIT=/usr/bin/git
+
+  # Since there is a problem with git in certain CMSSW releases
+  # We are getting all packages before initializing the CMSSW environment
+  $ECHO "Getting pythia8 from $PYTHIA_SOURCE with branch ${PYTHIA_BRANCH}"
+  $GIT clone "https://github.com/${PYTHIA_SOURCE}/pythia8.git" -b ${PYTHIA_BRANCH}
+  CHECK_EXIT $? "FAILED TO GET PYTHIA"
+
+  $ECHO "Getting all Condor scripts..."
+  $GIT clone https://github.com/kpedro88/CondorProduction CondorProduction
+  CHECK_EXIT $? "FAILED TO GET CONDOR"
+
+  $ECHO "Getting EMJ core code..."
+  $GIT clone https://gitlab.cern.ch/cms-emj/emj-production.git EMJProduction
+  CHECK_EXIT $? "FAILED TO GET EMJPRODUCTION"
+}
+
+function installCMSSW() {
   eval $(scramv1 runtime -sh)
   if [ -z $CMSSW_BASE ]; then
     $ECHO "Failed to setup CMSSW Evnrionment"
@@ -98,7 +121,6 @@ function installPythia() {
     return 0
     ;;
   *) ;;
-
   esac
 
   ## Getting the same libraries as the CMSSW tool
@@ -107,9 +129,8 @@ function installPythia() {
   BOOST_BASE=$(scram tool info boost | grep "BOOST_BASE" | sed 's/BOOST_BASE=//')
   LHAPDF_BASE=$(scram tool info lhapdf | grep "LHAPDF_BASE" | sed 's/LHAPDF_BASE=//')
 
+  ## There is a strange issue with git/github for this particular directory...
   ## Getting and compiling the modified pythia stuff
-  $ECHO "Getting pythia8"
-  git clone "https://github.com/${PYTHIA_SOURCE}/pythia8.git" -b ${PYTHIA_BRANCH} >/dev/null 2>&1
 
   $ECHO "Compiling custom pythia8"
   cd ${CMSSW_BASE}/pythia8
@@ -154,18 +175,18 @@ EOF_TOOLFILE
 }
 
 function installOthers() {
-  EMJ_BRANCH="master"
-  case "$CMSSW_RELEASE" in
-  CMSSW_10_2_*)
-    EMJ_BRANCH="master"
-    ;;
-  esac
+  cd $CMSSW_BASE/src
+  mkdir Condor
+  mkdir EMJ
+  mv $CMSSW_BASE/CondorProduction Condor/Production
+  mv $CMSSW_BASE/EMJProduction EMJ/Proction
+}
 
-  $ECHO "Getting all Condor scripts..."
-  git clone https://github.com/kpedro88/CondorProduction Condor/Production >/dev/null 2>&1
-
-  $ECHO "Getting EMJ core code..."
-  git clone https://gitlab.cern.ch/cms-emj/emj-production EMJ/Production >/dev/null 2>&1
+function CHECK_EXIT() {
+  if [[ $1 -ne 0 ]]; then
+    $ECHO $2
+    exit $1
+  fi
 }
 
 ## Calling the main function
