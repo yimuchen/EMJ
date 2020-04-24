@@ -96,7 +96,7 @@ function clonePackages() {
   CHECK_EXIT $? "FAILED TO GET CONDOR"
 
   $ECHO "Getting EMJ core code..."
-  $GIT clone https://gitlab.cern.ch/cms-emj/emj-production.git EMJProduction
+  $GIT clone ssh://git@gitlab.cern.ch:7999/cms-emj/emj-production.git EMJProduction
   CHECK_EXIT $? "FAILED TO GET EMJPRODUCTION"
 }
 
@@ -152,7 +152,7 @@ function installPythia() {
 
   ## Generating configuration file for CMSSW to use new pythia package
   cat <<'EOF_TOOLFILE' >${CMSSW_BASE}/config/toolbox/${SCRAM_ARCH}/tools/selected/pythia8.xml
-<tool name="pythia8" version="${VERSION}">
+<tool name="pythia8" version="${PYTHIA_VERSION}">
   <lib name="pythia8"/>
   <client>
     <environment name="PYTHIA8_BASE" default="$CMSSW_BASE/pythia8"/>
