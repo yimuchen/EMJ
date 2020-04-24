@@ -7,8 +7,12 @@ esac
 
 # Global svariable for usage
 CMSSW_RELEASE="CMSSW_10_2_21"
-PYTHIA_BRANCH="emg/230"
-PYTHIA_SOURCE="kpedro88"
+PYTHIA_VERSION="230"
+PYTHIA_BRANCH="emg"
+PYTHIA_SOURCE="yimuchen"
+
+## Loading in a funny version of git
+GIT=/usr/bin/git
 
 function main() {
   parserArgument $@
@@ -48,11 +52,11 @@ function parserArgument() {
   done
 
   if [[ $CMSSW_RELEASE == "CMSSW_10_2_"* ]]; then
-    export PYTHIA_BRANCH="emg/230"
+    export PYTHIA_VERSION="230"
   elif [[ $CMSSW_RELEASE == "CMSSW_9_3_"* ]]; then
-    export PYTHIA_BRANCH="emg/230"
+    export PYTHIA_VERSION="230"
   elif [[ $CMSSW_RELEASE == "CMSSW_7_1_"* ]]; then
-    export PYTHIA_BRANCH="emg/226"
+    export PYTHIA_VERSION="226"
   fi
 }
 
@@ -80,13 +84,11 @@ function clonePackages() {
   scramv1 project CMSSW $CMSSW_RELEASE
   cd $CMSSW_RELEASE
 
-  ## Loading in a funny version of git
-  GIT=/usr/bin/git
 
   # Since there is a problem with git in certain CMSSW releases
   # We are getting all packages before initializing the CMSSW environment
   $ECHO "Getting pythia8 from $PYTHIA_SOURCE with branch ${PYTHIA_BRANCH}"
-  $GIT clone "https://github.com/${PYTHIA_SOURCE}/pythia8.git" -b ${PYTHIA_BRANCH}
+  $GIT clone "https://github.com/${PYTHIA_SOURCE}/pythia8.git" -b ${PYTHIA_BRANCH}/${PYTHIA_VERSION}
   CHECK_EXIT $? "FAILED TO GET PYTHIA"
 
   $ECHO "Getting all Condor scripts..."
@@ -106,7 +108,7 @@ function installCMSSW() {
   else
     $ECHO "git cms-init $CMSSW_RELEASE..."
     cd ${CMSSW_BASE}/src
-    git cms-init >/dev/null 2>&1
+    ${GIT} cms-init >/dev/null 2>&1
     ## Must initialize the cmssw directory before anything else gets installed
   fi
 }
@@ -131,6 +133,10 @@ function installPythia() {
 
   ## There is a strange issue with git/github for this particular directory...
   ## Getting and compiling the modified pythia stuff
+  EXTRA_CONFIG=""
+  if [[ $CMSSW_RELEASE == "CMSSW_7_1_"* ]] ; then
+    EXTRA_CONFIG='--cxx-common="-std=c++11 -fPIC"'
+  fi
 
   $ECHO "Compiling custom pythia8"
   cd ${CMSSW_BASE}/pythia8
@@ -138,7 +144,7 @@ function installPythia() {
     --with-boost=${BOOST_BASE} \
     --with-hepmc2=${HEPMC_BASE} \
     --with-lhapdf6=${LHAPDF_BASE} \
-    --with-lhapdf6-plugin=LHAPDF6.h
+    --with-lhapdf6-plugin=LHAPDF6.h "$EXTRA_CONFIG"
 
   make -j $(($(nproc) / 2)) >/dev/null 2>&1
   make install >/dev/null 2>&1
@@ -146,7 +152,7 @@ function installPythia() {
 
   ## Generating configuration file for CMSSW to use new pythia package
   cat <<'EOF_TOOLFILE' >${CMSSW_BASE}/config/toolbox/${SCRAM_ARCH}/tools/selected/pythia8.xml
-<tool name="pythia8" version="230">
+<tool name="pythia8" version="${VERSION}">
   <lib name="pythia8"/>
   <client>
     <environment name="PYTHIA8_BASE" default="$CMSSW_BASE/pythia8"/>
