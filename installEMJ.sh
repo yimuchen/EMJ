@@ -185,7 +185,7 @@ function installOthers() {
   mkdir Condor
   mkdir EMJ
   mv $CMSSW_BASE/CondorProduction Condor/Production
-  mv $CMSSW_BASE/EMJProduction EMJ/Proction
+  mv $CMSSW_BASE/EMJProduction EMJ/Production
 }
 
 function CHECK_EXIT() {
