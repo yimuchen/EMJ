@@ -9,7 +9,7 @@ esac
 CMSSW_RELEASE="CMSSW_10_2_21"
 PYTHIA_VERSION="230"
 PYTHIA_BRANCH="emg"
-PYTHIA_SOURCE="yimuchen"
+PYTHIA_SOURCE="kpedro88"
 
 ## Loading in a funny version of git
 GIT=/usr/bin/git
