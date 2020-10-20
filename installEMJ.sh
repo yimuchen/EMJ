@@ -63,13 +63,13 @@ function parserArgument() {
 function clonePackages() {
   case "$CMSSW_RELEASE" in
   CMSSW_10_2_*) # For 2018 GEN and RECO
-    export SCRAM_ARCH="slc6_amd64_gcc700"
+    export SCRAM_ARCH="slc7_amd64_gcc700"
     ;;
   CMSSW_9_*) # For 2017 GEN and RECO
-    export SCRAM_ARCH="slc6_amd64_gcc630"
+    export SCRAM_ARCH="slc7_amd64_gcc630"
     ;;
   CMSSW_8_0_*) # For 2016 RECO
-    export SCRAM_ARCH="slc6_amd64_gcc530"
+    export SCRAM_ARCH="slc7_amd64_gcc530"
     ;;
   CMSSW_7_1_*) # For 2016 GEN
     export SCRAM_ARCH="slc6_amd64_gcc481"
