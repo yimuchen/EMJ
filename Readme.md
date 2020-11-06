@@ -37,7 +37,7 @@ The following options are supported:
 Run the command
 
 ```bash
-python emjHelper.py dumptime  --mMed=1000 --kSq=100
+python emjHelper.py dumptime --mMed=1000 --kappa=1
 ```
 
 This prints a five columns of text. The first column is the mediator mass (in
@@ -45,4 +45,3 @@ GeV) the following 4 columns are the decay lifetime (in mm) for the "neutral"
 dark pion (`pi0->qq`), "charged" dark pion (`pi->ds`), “neutral” dark kaon
 (`K0->db`), and the "charged" dark kaon (`K->sb`). Standard plotting scripts for
 the output of this file can be found in `EMJ/QualCheck`.
-
