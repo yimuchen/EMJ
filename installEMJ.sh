@@ -75,6 +75,7 @@ function clonePackages() {
     export SCRAM_ARCH="slc6_amd64_gcc481"
     ;;
   *)
+    $ECHO $CMSSW_RELEASE
     $ECHO "UNSUPPORTED CMSSW RELEASE! Exiting..."
     exit 1
     ;;

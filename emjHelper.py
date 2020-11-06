@@ -241,7 +241,9 @@ if __name__ == "__main__":
   parser.add_argument('--kappa',
                       default=1,
                       type=float,
-                      help='Kappa0 squared (factor to scale decay lifetime)')
+                      help=('Kappa0 (SM-Dark sector compling constant) if '
+                            'mode==aligned, dark pion lifetime[mm] if '
+                            'mode == unflavored '))
   parser.add_argument('--mDark',
                       default=10,
                       type=float,
