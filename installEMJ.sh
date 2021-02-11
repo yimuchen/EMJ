@@ -32,8 +32,8 @@ function usage() {
   $ECHO
   $ECHO "Options:"
   $ECHO "-c [RELEASE]  \tCMSSW release to install (default ${CMSSW_RELEASE})"
-  $ECHO "-f [fork]     \tPythia fork to use (default = ${PYTHIA_SOURCE})"
-  $ECHO "-b [branch]   \tPythia branch to use (default = ${PYTHIA_BRANCH})"
+  $ECHO "-s [fork]     \tPythia source to use (default = ${PYTHIA_SOURCE})"
+  $ECHO "-m            \tFlag used for run installation"
 }
 
 function parserArgument() {
