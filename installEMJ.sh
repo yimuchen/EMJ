@@ -5,13 +5,13 @@ Linux) ECHO="echo -e >>> EMJ >>>" ;;
 *) ECHO="echo >>> EMJ >>>" ;;
 esac
 
-# Global svariable for usage
-CMSSW_RELEASE="CMSSW_10_2_21"
-PYTHIA_VERSION="230"
-PYTHIA_BRANCH="emg"
-PYTHIA_SOURCE="kpedro88"
+# Global variable for usage
+CMSSW_RELEASE="CMSSW_10_6_27"
+PYTHIA_VERSION="240"
+PYTHIA_BRANCH="emj"
+PYTHIA_SOURCE="yimuchen"
 
-## Loading in a funny version of git
+## Loading in a fixed version of git
 GIT=/usr/bin/git
 
 function main() {
@@ -51,28 +51,24 @@ function parserArgument() {
     esac
   done
 
-  if [[ $CMSSW_RELEASE == "CMSSW_10_2_"* ]]; then
-    export PYTHIA_VERSION="230"
-  elif [[ $CMSSW_RELEASE == "CMSSW_9_3_"* ]]; then
-    export PYTHIA_VERSION="230"
-  elif [[ $CMSSW_RELEASE == "CMSSW_7_1_"* ]]; then
-    export PYTHIA_VERSION="226"
+  if [[ $CMSSW_RELEASE == "CMSSW_10_6_"* ]]; then
+    export PYTHIA_VERSION="240"
   fi
 }
 
 function clonePackages() {
   case "$CMSSW_RELEASE" in
-  CMSSW_10_2_*) # For 2018 GEN and RECO
+  CMSSW_10_6_*) # For UL processing
     export SCRAM_ARCH="slc7_amd64_gcc700"
     ;;
-  CMSSW_9_*) # For 2017 GEN and RECO
-    export SCRAM_ARCH="slc7_amd64_gcc630"
-    ;;
-  CMSSW_8_0_*) # For 2016 RECO
+  CMSSW_8_0_33_UL) # For 2016 HLT menu
     export SCRAM_ARCH="slc7_amd64_gcc530"
     ;;
-  CMSSW_7_1_*) # For 2016 GEN
-    export SCRAM_ARCH="slc6_amd64_gcc481"
+  CMSSW_9_4_14_UL_patch1) # For 2017 HLT menu
+    export SCRAM_ARCH="slc7_amd64_gcc630"
+    ;;
+  CMSSW_10_2_16_UL) # For 2018 HLT Menu
+    export SCRAM_ARCH="slc7_amd64_gcc700"
     ;;
   *)
     $ECHO $CMSSW_RELEASE
@@ -84,7 +80,6 @@ function clonePackages() {
   source /cvmfs/cms.cern.ch/cmsset_default.sh
   scramv1 project CMSSW $CMSSW_RELEASE
   cd $CMSSW_RELEASE
-
 
   # Since there is a problem with git in certain CMSSW releases
   # We are getting all packages before initializing the CMSSW environment
@@ -116,28 +111,15 @@ function installCMSSW() {
 
 function installPythia() {
   ## Skipping pythia installation for non-gen releases
-  case "$CMSSW_RELEASE" in
-  CMSSW_9_4_*) # For 2017 RECO
+  if [[ $CMSSW_RELEASE != CMSSW_10_6_* ]]; then
     return 0
-    ;;
-  CMSSW_8_0_*) # For 2016 RECO
-    return 0
-    ;;
-  *) ;;
-  esac
+  fi
 
   ## Getting the same libraries as the CMSSW tool
   cd ${CMSSW_BASE}
   HEPMC_BASE=$(scram tool info hepmc | grep "HEPMC_BASE" | sed 's/HEPMC_BASE=//')
   BOOST_BASE=$(scram tool info boost | grep "BOOST_BASE" | sed 's/BOOST_BASE=//')
   LHAPDF_BASE=$(scram tool info lhapdf | grep "LHAPDF_BASE" | sed 's/LHAPDF_BASE=//')
-
-  ## There is a strange issue with git/github for this particular directory...
-  ## Getting and compiling the modified pythia stuff
-  EXTRA_CONFIG=""
-  if [[ $CMSSW_RELEASE == "CMSSW_7_1_"* ]] ; then
-    EXTRA_CONFIG='--cxx-common="-std=c++11 -fPIC"'
-  fi
 
   $ECHO "Compiling custom pythia8"
   cd ${CMSSW_BASE}/pythia8
