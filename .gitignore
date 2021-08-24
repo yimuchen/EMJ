@@ -3,4 +3,5 @@
 !.gitignore
 !Readme.md
 !installEMJ.sh
+!installEMJ_submit.sh
 !emjHelper.py
