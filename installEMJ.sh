@@ -56,9 +56,38 @@ function parserArgument() {
   fi
 }
 
+## CMSSW Production version for RunIISummer20ULXX campaigns
+#
+# Reference process: RSGluonToTT_M-500_TuneCP5_13TeV-pythia8
+#
+# 20UL16 (Both APV and non APV processes)
+# - GEN: CMSSW_10_6_18 (pythia 240)
+# - SIM: CMSSW_10_6_17_patch1
+# - DIGI: CMSSW_10_6_17_patch1
+# - HLT: CMSSW_8_0_33_UL
+# - RECO: CMSSW_10_6_17_patch1
+# - MINIAODv2: CMSSW_10_6_25
+#
+# 20UL17:
+# - GEN: CMSSW_10_6_17_patch1  (pythia 240)
+# - SIM: CMSSW_10_6_17_patch1
+# - DIGI: CMSSW_10_6_17_patch1
+# - HLT: CMSSW_9_4_14_UL_patch1
+# - RECO: CMSSW_10_6_17_patch1
+# - MINIAODv2: CMSSW_10_6_20
+#
+# 20UL18:
+# - GEN: CMSSW_10_6_18 (pythin 240)
+# - SIM: CMSSW_10_6_17_patch1
+# - DIGI: CMSSW_10_6_17_patch1
+# - HLT: CMSSW_10_2_16_UL
+# - RECO: CMSSW_10_6_17_patch1
+# - MINIAODv2: CMSSW_10_6_20
+
+
 function clonePackages() {
   case "$CMSSW_RELEASE" in
-  CMSSW_10_6_*) # For UL processing
+  CMSSW_10_6_25) # For UL processing
     export SCRAM_ARCH="slc7_amd64_gcc700"
     ;;
   CMSSW_8_0_33_UL) # For 2016 HLT menu
@@ -84,14 +113,14 @@ function clonePackages() {
   # Since there is a problem with git in certain CMSSW releases
   # We are getting all packages before initializing the CMSSW environment
   $ECHO "Getting pythia8 from $PYTHIA_SOURCE with branch ${PYTHIA_BRANCH}"
-  $GIT clone "https://github.com/${PYTHIA_SOURCE}/pythia8.git" -b ${PYTHIA_BRANCH}/${PYTHIA_VERSION}
+  $GIT clone "https://github.com/${PYTHIA_SOURCE}/pythia8" -b ${PYTHIA_BRANCH}/${PYTHIA_VERSION}
   CHECK_EXIT $? "FAILED TO GET PYTHIA"
 
-  $ECHO "Getting all Condor scripts..."
+  $ECHO "Getting Condor scripts..."
   $GIT clone https://github.com/kpedro88/CondorProduction CondorProduction
   CHECK_EXIT $? "FAILED TO GET CONDOR"
 
-  $ECHO "Getting EMJ core code..."
+  $ECHO "Getting EMJProduction code..."
   $GIT clone ssh://git@gitlab.cern.ch:7999/cms-emj/emj-production.git EMJProduction
   CHECK_EXIT $? "FAILED TO GET EMJPRODUCTION"
 }
@@ -154,7 +183,7 @@ EOF_TOOLFILE
   # Generating dependencies package
   scram b echo_pythia8_USED_BY |
     tr ' ' '\n' |
-    grep "self" |
+    grep -E 'cmssw|self' |
     cut -d'/' -f2-3 |
     sort -u >${CMSSW_BASE}/pkgs.txt
 
