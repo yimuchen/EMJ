@@ -7,7 +7,7 @@ esac
 
 # Global variable for usage
 CMSSW_RELEASE="CMSSW_10_6_27"
-EMJ_BRANCH="master"
+EMJ_BRANCH="2021.Oct.UL"
 PYTHIA_VERSION="240"
 PYTHIA_BRANCH="emj"
 PYTHIA_SOURCE="yimuchen"
