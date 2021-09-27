@@ -87,7 +87,7 @@ function parserArgument() {
 
 function clonePackages() {
   case "$CMSSW_RELEASE" in
-  CMSSW_10_6_25) # For UL processing
+  CMSSW_10_6_*) # For UL processing
     export SCRAM_ARCH="slc7_amd64_gcc700"
     ;;
   CMSSW_8_0_33_UL) # For 2016 HLT menu
