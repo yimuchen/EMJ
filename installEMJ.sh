@@ -7,6 +7,7 @@ esac
 
 # Global svariable for usage
 CMSSW_RELEASE="CMSSW_10_2_21"
+EMJ_BRANCH="2020.Apr.Prelegacy"
 PYTHIA_VERSION="230"
 PYTHIA_BRANCH="emg"
 PYTHIA_SOURCE="kpedro88"
@@ -33,14 +34,18 @@ function usage() {
   $ECHO "Options:"
   $ECHO "-c [RELEASE]  \tCMSSW release to install (default ${CMSSW_RELEASE})"
   $ECHO "-s [fork]     \tPythia source to use (default = ${PYTHIA_SOURCE})"
+  $ECHO "-b [branch]   \tEMJ Production branch/tag to use (default = ${EMJ_BRANCH})"
   $ECHO "-m            \tFlag used for run installation"
 }
 
 function parserArgument() {
-  while getopts "c:s:h" opt; do
+  while getopts "c:b:s:h" opt; do
     case "$opt" in
     c)
       CMSSW_RELEASE=$OPTARG
+      ;;
+    b)
+      EMJ_BRANCH=$OPTARG
       ;;
     s)
       PYTHIA_SOURCE=$OPTARG
@@ -97,7 +102,7 @@ function clonePackages() {
   CHECK_EXIT $? "FAILED TO GET CONDOR"
 
   $ECHO "Getting EMJ core code..."
-  $GIT clone ssh://git@gitlab.cern.ch:7999/cms-emj/emj-production.git EMJProduction
+  $GIT clone ssh://git@gitlab.cern.ch:7999/cms-emj/emj-production.git EMJProduction -b ${EMJ_BRANCH}
   CHECK_EXIT $? "FAILED TO GET EMJPRODUCTION"
 }
 
